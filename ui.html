@@ -1,0 +1,340 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Transcriber</title>
+    <style>
+      :root {
+        --bg: #f7f7f9;
+        --surface: #fff;
+        --text: #18181b;
+        --muted: #71717a;
+        --line: #e4e4e7;
+        --track: #ebebf0;
+        --accent: #5b5bd6;
+        --on-accent: #fff;
+        --danger: #d63a3a;
+        color-scheme: light;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #111113;
+          --surface: #1b1b1f;
+          --text: #ececef;
+          --muted: #8e8e99;
+          --line: #2c2c33;
+          --track: #26262c;
+          --accent: #8e8cff;
+          --on-accent: #111113;
+          --danger: #ff6b6b;
+          color-scheme: dark;
+        }
+      }
+      * {
+        box-sizing: border-box;
+        margin: 0;
+      }
+      html,
+      body {
+        height: 100%;
+      }
+      body {
+        background: var(--bg);
+        color: var(--text);
+        font:
+          15px/1.5 "Segoe UI Variable Text",
+          "Segoe UI",
+          system-ui,
+          sans-serif;
+        display: grid;
+        place-items: center;
+        overflow: hidden;
+        user-select: none;
+      }
+      .screen {
+        display: none;
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+        gap: 12px;
+        width: min(400px, 100% - 48px);
+      }
+      .screen.active {
+        display: flex;
+        animation: in 0.35s ease;
+      }
+      @keyframes in {
+        from {
+          opacity: 0;
+          transform: translateY(6px);
+        }
+      }
+      .icon {
+        width: 56px;
+        height: 56px;
+        border-radius: 16px;
+        display: grid;
+        place-items: center;
+        background: color-mix(in srgb, var(--accent) 14%, transparent);
+        color: var(--accent);
+        margin-bottom: 4px;
+      }
+      .icon.bad {
+        background: color-mix(in srgb, var(--danger) 14%, transparent);
+        color: var(--danger);
+      }
+      h1 {
+        font:
+          600 26px/1.2 "Segoe UI Variable Display",
+          "Segoe UI",
+          system-ui,
+          sans-serif;
+        letter-spacing: -0.02em;
+      }
+      .muted {
+        color: var(--muted);
+      }
+      .row {
+        display: flex;
+        gap: 10px;
+        margin-top: 12px;
+      }
+      button {
+        font: inherit;
+        font-weight: 500;
+        border-radius: 10px;
+        padding: 9px 20px;
+        cursor: pointer;
+        border: 1px solid var(--line);
+        background: var(--surface);
+        color: var(--text);
+        transition:
+          transform 0.1s,
+          border-color 0.15s,
+          filter 0.15s;
+      }
+      button:hover {
+        border-color: color-mix(in srgb, var(--text) 30%, var(--line));
+      }
+      button:active {
+        transform: scale(0.97);
+      }
+      button:focus-visible {
+        outline: 2px solid var(--accent);
+        outline-offset: 2px;
+      }
+      button.primary {
+        background: var(--accent);
+        border-color: transparent;
+        color: var(--on-accent);
+      }
+      button.primary:hover {
+        filter: brightness(1.08);
+      }
+      button.link {
+        border: 0;
+        background: none;
+        color: var(--muted);
+        padding: 6px 10px;
+      }
+      button.link:hover {
+        color: var(--text);
+      }
+      .file {
+        font-weight: 600;
+        max-width: 100%;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .bar {
+        width: 100%;
+        height: 6px;
+        border-radius: 99px;
+        background: var(--track);
+        overflow: hidden;
+        margin-top: 6px;
+      }
+      #fill {
+        height: 100%;
+        width: 0;
+        background: var(--accent);
+        border-radius: inherit;
+        transition: width 0.5s ease;
+      }
+      .bar.indet #fill {
+        width: 35%;
+        animation: slide 1.3s ease-in-out infinite;
+      }
+      @keyframes slide {
+        from {
+          transform: translateX(-100%);
+        }
+        to {
+          transform: translateX(290%);
+        }
+      }
+      .meta {
+        width: 100%;
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        font-size: 13px;
+        color: var(--muted);
+        font-variant-numeric: tabular-nums;
+      }
+      .paths {
+        font-size: 12.5px;
+        color: var(--muted);
+        word-break: break-all;
+        white-space: pre-line;
+        user-select: text;
+      }
+      #err {
+        font:
+          12.5px/1.5 ui-monospace,
+          Consolas,
+          monospace;
+        color: var(--muted);
+        white-space: pre-wrap;
+        word-break: break-word;
+        user-select: text;
+        max-height: 140px;
+        overflow: auto;
+      }
+      @media (prefers-reduced-motion: reduce) {
+        * {
+          animation: none !important;
+          transition: none !important;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <section id="pick" class="screen active">
+      <div class="icon">
+        <svg
+          width="26"
+          height="26"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+        >
+          <path d="M4 10v4M8 6v12M12 3v18M16 8v8M20 11v2" />
+        </svg>
+      </div>
+      <h1>Transcriber</h1>
+      <p class="muted">Hebrew speech to text, on your GPU.</p>
+      <div class="row">
+        <button class="primary" onclick="pick()">Choose video</button>
+      </div>
+    </section>
+
+    <section id="work" class="screen">
+      <p class="file" id="wfile"></p>
+      <div class="bar" id="bar"><div id="fill"></div></div>
+      <div class="meta"><span id="wstatus"></span><span id="wpct"></span></div>
+    </section>
+
+    <section id="done" class="screen">
+      <div class="icon">
+        <svg
+          width="26"
+          height="26"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2.2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <path d="M5 12.5l4.5 4.5L19 7.5" />
+        </svg>
+      </div>
+      <h1>Done</h1>
+      <p class="paths" id="paths"></p>
+      <div class="row">
+        <button class="primary" onclick="copy(this)">Copy text</button>
+      </div>
+      <button class="link" onclick="show('pick')">Transcribe another</button>
+    </section>
+
+    <section id="fail" class="screen">
+      <div class="icon bad">
+        <svg
+          width="26"
+          height="26"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2.2"
+          stroke-linecap="round"
+        >
+          <path d="M12 7v6M12 17h.01" />
+        </svg>
+      </div>
+      <h1>Something went wrong</h1>
+      <p id="err"></p>
+      <div class="row"><button onclick="show('pick')">Back</button></div>
+    </section>
+
+    <script>
+      const $ = (id) => document.getElementById(id);
+      let text = "";
+      const show = (id) =>
+        document
+          .querySelectorAll(".screen")
+          .forEach((s) => s.classList.toggle("active", s.id === id));
+      const base = (p) => p.split(/[\\/]/).pop();
+
+      async function pick() {
+        const path = await pywebview.api.pick();
+        if (!path) return;
+        $("wfile").textContent = base(path);
+        status("Starting…", null);
+        show("work");
+        pywebview.api.start(path);
+      }
+
+      function status(msg, frac) {
+        $("wstatus").textContent = msg;
+        $("bar").classList.toggle("indet", frac == null);
+        $("fill").style.width = frac == null ? "" : frac * 100 + "%";
+        $("wpct").textContent =
+          frac == null ? "" : Math.round(frac * 100) + "%";
+      }
+
+      function done(t, txt) {
+        text = t;
+        $("paths").textContent =
+          `Saved to ${txt}\nDeleted when you close the app or start a new one.`;
+        show("done");
+      }
+
+      function fail(msg) {
+        $("err").textContent = msg;
+        show("fail");
+      }
+
+      async function copy(btn) {
+        try {
+          await navigator.clipboard.writeText(text);
+        } catch {
+          const ta = Object.assign(document.createElement("textarea"), {
+            value: text,
+          });
+          document.body.append(ta);
+          ta.select();
+          document.execCommand("copy");
+          ta.remove();
+        }
+        const label = (btn.dataset.label ??= btn.textContent);
+        btn.textContent = "Copied ✓";
+        setTimeout(() => (btn.textContent = label), 1400);
+      }
+    </script>
+  </body>
+</html>
